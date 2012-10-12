@@ -7,7 +7,9 @@ pwd = File.dirname(__FILE__)
 @CRFPP  = "#{pwd}/../../crfpp"
 @SRC    = "#{pwd}/genericSect"
 @DATA   = "#{pwd}/../../resources/sectLabel/"
-@TEST_DIR = "/tmp/"
+# 2012/10/06 Yumichika Modified! For Windows!
+# @TEST_DIR = "/tmp/"
+@TEST_DIR = "d:/"
 
 name  = "#{Time.now.to_i}-#{Process.pid}"
 
