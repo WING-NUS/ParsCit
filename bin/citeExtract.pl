@@ -33,9 +33,6 @@ use Getopt::Std;
 use strict 'vars';
 use lib $FindBin::Bin . "/../lib";
 
-use lib "/home/wing.nus/tools/languages/programming/perl-5.10.0/lib/5.10.0";
-use lib "/home/wing.nus/tools/languages/programming/perl-5.10.0/lib/site_perl/5.10.0";
-
 # Dependencies
 use File::Spec;
 use File::Basename;
@@ -132,7 +129,7 @@ if ($opt_h)
 }
 
 my $mode		= (!defined $opt_m) ? $default_mode : ParseMode($opt_m);
-my $ph_model	= (defined $opt_t) ? 1 : 0;
+my $ph_model	= ($opt_t == 1) ? 1 : 0;
 
 my $in		= shift;	# input file
 my $out		= shift;	# if available
@@ -232,7 +229,6 @@ else
 {
 	$text_file	= $in;
 }
-
 # SECTLABEL
 if (($mode & $SECTLABEL) == $SECTLABEL)
 { 
@@ -243,7 +239,7 @@ if (($mode & $SECTLABEL) == $SECTLABEL)
 	{
 		my $cmd	= $FindBin::Bin . "/sectLabel/processOmniXMLv3.pl -q -in $in -out $text_file.feature -decode";
 		system($cmd);
-
+		
 		my $address_file = $text_file . ".feature" . ".address";
 		if (! open(IN, "<:utf8", $address_file)) { return (-1, "Could not open address file " . $address_file . ": " . $!); }
 		
