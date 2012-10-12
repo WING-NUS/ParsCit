@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 # -*- cperl -*-
 =head1 NAME
 
@@ -18,15 +18,8 @@ parsCit.cgi
 
 =cut
 require 5.0;
-
-use CGI;
-use CGI::Carp;
-
-use File::Temp;
-use HTTP::Message;
-use LWP::UserAgent;
-
 use Getopt::Std;
+use CGI;
 use LWP::Simple qw(!head);
 
 ### USER customizable section
@@ -36,14 +29,13 @@ if ($tmpfile =~ /^([-\@\w.]+)$/) { $tmpfile = $1; }                 # untaint tm
 $tmpfile = "/tmp/" . $tmpfile;
 $0 =~ /([^\/]+)$/; my $progname = $1;
 my $outputVersion = "1.0";
-my $installDir = "/home/wing.nus/services/parscit/tools";
-#my $installDir = "/home/lmthang/public_html/parsCit";
+#my $installDir = "/home/wing.nus/services/parscit/tools";
+my $installDir = "/home/lmthang/public_html/parsCit";
 my $libDir = "$installDir/lib/";
 my $logFile = "$libDir/cgiLog.txt";
 my $seed = $$;
 my $debug = 0;
 my $loadThreshold = 2;
-my $internalKey = "wing"; # Thang: to bypass load check
 ### END user customizable section
 
 $| = 1;								    # flush output
@@ -78,20 +70,9 @@ sub License {
 print STDERR "# Copyright 2008 \251 by Min-Yen Kan\n";
 }
 
-my $q   = new CGI;
-# Maximum file size, 128MB
-$CGI::POST_MAX = 1024 * 1024 * 10;
-# We don't accept "anything"
-my $safe_filename_characters = "a-zA-Z0-9_.-";
-
+my $q = new CGI;
 print "Content-Type: text/html\n\n";
 printHeader();
-
-# check load if possible to do demo
-if ($q->param('key') ne $internalKey && loadTooHigh()) {
-printLoadTooHigh();
-exit;
-}
 
 ###
 ### MAIN program
@@ -107,6 +88,7 @@ my $demo = 0;
 #my $parsHedModel = ($q->param('ParsHedModel') eq "1") ? "line-level" : "token-level"; # Added by Thang (v090625) for switching between old and new models
 my $option = $q->param('ParsCitOptions');
 
+
 if ($q->param('ping') ne "") {
 ## Ping web service up
 my $cmd = "nice ./ParsCitClient.rb -a status";
@@ -121,7 +103,7 @@ print "Yay! Web service is up.\n<BR>";
 } else {
 print "Web service for extracting citations is down.  Try again later.\n<BR>";
 }
-print "[ <A HREF=\"index.html\">Back to ParsCit Home Page</A> ]\n";
+print "[ <A HREF=\"emma.html\">Back to ParsCit Home Page</A> ]\n";
 printTrailer();
 logMessage("# Web service ping");
 exit;
@@ -152,19 +134,11 @@ $message = "Demo 1: (whole file):\n  Input: $inputMethod\n";
 $demo = 1;
 
 } elsif (($q->param('urlfile') ne "") and ($q->param('demo') == "2")) { # M1) get input from url
-
-# Please be patient
-printLoader();
-
 getstore ($q->param('urlfile'), $filename);
 $inputMethod = "URL";
 $message = "Demo 2: (whole file):\n  Input: $inputMethod\n";
 $demo = 2;
 } elsif (($q->param('datafile') ne "") and ($q->param('demo') == "2")) { 	# M2) get input from uploaded text file
-
-# Please be patient
-printLoader();
-
 # Copy a binary file to somewhere safe
 open (OUTFILE,">$filename");
 while ($bytesread = read($q->param('datafile'),$buffer,1024)) {
@@ -175,10 +149,6 @@ $inputMethod = "upload";
 $message = "Demo 2 (whole file):\n  Input: $inputMethod \n";
 $demo = 2;
 } elsif (($q->param('textfile') ne "") and ($q->param('demo') == "2")) { # M3) by text area
-
-# Please be patient
-printLoader();
-
 open (OUTFILE,">$filename");
 print OUTFILE $q->param('textfile');
 close (OUTFILE);
@@ -186,60 +156,6 @@ close (OUTFILE);
 $inputMethod = "text field";
 $message = "Demo 2: (whole file):\n  Input: $inputMethod\n";
 $demo = 2;
-} elsif (($q->param('pdffile') ne "") and ($q->param('demo') == "2")) { # M4) uploaded pdf
-	# This file works but becomes too messy, this part is added by Do Hoang Nhat Huy
-
-	# Please be patient
-	printLoader();
-
-	# Storage
-	my $upload_dir  = "/home/wing.nus/tmp";
-	my $htmp  = File::Temp->new(DIR => $upload_dir);
-	# Get the temporary unique filename
-	my $ppath = $htmp->filename;
-	
-	my $buf = undef;
-	# Save the uploaded file
-	open my $output_handle, ">", $ppath or die "$!"; binmode $output_handle;
-	while (read($q->param( 'pdffile' ), $buf, 1024)) { print $output_handle $buf; }
-	close $output_handle;	
-
-	# Dont understand
-	system("chmod +r $ppath");
-
-	if (Verify( $ppath )) {
-		my $ua       = LWP::UserAgent->new();
-		my $response = $ua->post( "http://wing.comp.nus.edu.sg/parsCit/upload.cgi",
-								  'Accept'			=> "text/xml;q=0.9,*/*;q=0.8",
-								  'Accept-Encoding'	=> "gzip, deflate",
-								  'Accept-Charset'	=> "ISO-8859-1,utf-8;q=0.7,*;q=0.7",
-								  'Content-Type'	=> "multipart/form-data",
-								  'Content'			=> [ 'content' => [$ppath] ]);
-
-		my $ocontent = $response->decoded_content('default_charset'=>'utf8');
-		
-		open OUTFILE, ">$filename";
-		print OUTFILE $ocontent;
-		close OUTFILE;
-
-		if (Verify( $filename )) {
-			$inputMethod = "upload";
-			$message = "Demo 2 (whole file):\n  Input: $inputMethod \n";
-			$demo = 2;
-		} else {
-			## Fail to ocr 
-  			print "<script type='text/javascript'> document.getElementById('background').style.display = 'none' </script>";
-			print "<P>Fail to ocr your pdf.  Please <A HREF=\"index.html\">return to the ParsCit home page</A> to try again.\n";
-			printTrailer();
-			exit;
-		}
-	} else {
-		## Fpuail to upload
-  		print "<script type='text/javascript'> document.getElementById('background').style.display = 'none' </script>";
-		print "<P>Fail to save your pdf.  Please <A HREF=\"index.html\">return to the ParsCit home page</A> to try again.\n";
-		printTrailer();
-		exit;
-	}
 
 ## Try Demo 3 
 } elsif (($q->param('urllines') ne "") and ($q->param('demo') == "3")){ # M1) get input from url
@@ -267,7 +183,7 @@ $message = "Demo 3: (line set):\n  Input: $inputMethod\n";
 $demo = 3;
 } else {
 ## Oops, no input?
-print "<P>You must provide some input data.  Please <A HREF=\"index.html\">return to the ParsCit home page</A> to try again.\n";
+print "<P>You must provide some input data.  Please <A HREF=\"emma.html\">return to the ParsCit home page</A> to try again.\n";
 printTrailer();
 logMessage("# Demo: None selected\n  Input: <no data>\n  Output: <no data>\n");
 exit;
@@ -278,10 +194,16 @@ open (IF,$filename) || die;
 while (<IF>) { $inputBuf .= $_; }
 close $filename;
 
+# check load if possible to do demo
+if (loadTooHigh()) {
+printLoadTooHigh();
+exit;
+}
+
 my $cmd = "";
 my $outputBuf = "";
 if ($demo == 1 ) {		# run demo 1
-  # Thang v101101: call BiblioScript
+  # Thang v100901: call BiblioScript
   biblioScript($option, $q, $filename, "all");
 
   $cmd = "nice ./citeExtract.pl ";
@@ -312,6 +234,9 @@ if ($demo == 1 ) {		# run demo 1
   print CGI::escapeHTML($outputBuf);
   print "</PRE></DIV>";
 } elsif ($demo == 2) {
+  # Thang v100901: call BiblioScript
+  biblioScript($option, $q, $filename, "xml");
+
   $cmd = "nice ./citeExtract.pl -i xml ";
 
   if ($option == 1){
@@ -330,22 +255,19 @@ if ($demo == 1 ) {		# run demo 1
     $cmd .= "-m extract_all";
   }
 
-  chdir ("$installDir/bin");
+
   $cmd .= " $filename";
-  $outputBuf = `$cmd`;  
-
-  # Thang v101101: call BiblioScript
-  biblioScript($option, $q, $filename, "xml");
-
-  # print "Executing <B>$cmd</B>.\n";
+  print "Executing <B>$cmd</B>.\n";
   print "Input Method: <B>$inputMethod</B>.";
+  chdir ("$installDir/bin");
   print "<BR>[ <A HREF=\"javascript:toggleLayer('hidden1')\">Show XML output</A> ]";
   print "<DIV ID=\"hidden1\" CLASS=\"hidden\" STYLE=\"display:none;\"><PRE>";
+  $outputBuf = `$cmd`;
   print CGI::escapeHTML($outputBuf);
   print "</PRE></DIV>";
 
 } elsif ($demo == 3) {
-  # Thang v101101: call BiblioScript
+  # Thang v100901: call BiblioScript
   biblioScript(1, $q, $filename, "ref");
 
   $cmd = "./parseRefStrings.pl $filename";
@@ -400,11 +322,10 @@ printTrailer();
 ### END of main program
 ###
 
-# Thang v101101: incorporate BiblioScript
+# Thang v100901: incorporate BiblioScript
 sub biblioScript {
   my ($option, $q, $fileName, $inputFormat) = @_;
 
-  my $tmpDir = "/tmp/".newTmpFile();
   if($option =~ /^(1|3|5)$/) {# citations requested
     # get export types (selected checkboxes)
     my @exportTypes = ();
@@ -415,6 +336,7 @@ sub biblioScript {
       }
     }
 
+    my $tmpDir = "/tmp/".newTmpFile();
     my $size = scalar(@exportTypes);
     if($size > 0){
       chdir ("$installDir/bin");
@@ -430,9 +352,6 @@ sub biblioScript {
         $cmd = "./BiblioScript/biblio_script.sh -q -i mods -o $format $tmpDir/parscit_mods.xml $tmpDir";
         system($cmd);
       }
-
-	  # Remove the loader
-	  print "<script type='text/javascript'> document.getElementById('background').style.display = 'none' </script>";
 
       # get the output
       foreach $format(@exportTypes){
@@ -454,13 +373,11 @@ sub biblioScript {
 }
 
 sub loadTooHigh {
-	my $load = `uptime`;
-	
-	$load =~ /load average: ([\d.]+)/i;
-	$load = $1;
-
-	print "Load on server: $load<br/>";
-	if ($load > $loadThreshold) { return 1; } else { return 0; }
+my $load = `uptime`;
+  $load =~ /load average: ([\d.]+)/i;
+  my $load = $1;
+  print "Load on server: $load<br/>";
+  if ($load > $loadThreshold) { return 1; } else { return 0; }
 }
 
 sub printHeader {
@@ -570,7 +487,7 @@ sub processCitations {
     } elsif ($lines[$i] =~ /^<context position=\"(\d+)\"[^>]+>(.+)<\/context>$/) {
       $contextIndex++;
       $contextsBuf .= "<P>Context $contextIndex at byte $1: ...$2...</P>";
-    } elsif ($lines[$i] =~ /^<(author|date|title|booktitle|note|volume|issue|number|pages|journal|location|marker)>(.+)/) {
+    } elsif ($lines[$i] =~ /^<(author|date|title|booktitle|note|volume|number|pages|journal|location|marker)>(.+)/) {
       if ($1 eq "marker") { $fieldsBuf = "<span class=\"$1\">$2</span>: \n$fieldsBuf"; }
       else { $fieldsBuf .= "<span class=\"$1\" onmouseover=\"tooltip(\'$1\')\" onmouseout=\"exit()\">$2</span>\n"; }
     }
@@ -583,7 +500,7 @@ sub processCitations {
 
 sub printTypes {
   my $buf = "Key: ";
-  foreach my $type ("author","booktitle","date","editor","institution","journal","location","note","pages","publisher","tech","title","volume","issue","number","marker") {
+  foreach my $type ("author","booktitle","date","editor","institution","journal","location","note","pages","publisher","tech","title","volume","number","marker") {
     $buf .= "<SPAN CLASS=\"$type\">$type</SPAN> ";
   }
   $buf .= "<BR>\n";
@@ -675,40 +592,9 @@ function exit()
 TOOLTIP
 }
 
-sub printLoader {
-# Ugly
-print <<LOADER
-<div id="background"><center><img src="loader.gif"><br /> Please be patient &hellip;</center></div>
-LOADER
-}
-
-# Thang v101101: method to generate tmp file name
+# Thang v100901: method to generate tmp file name
 sub newTmpFile {
   my $tmpFile = `date '+%Y%m%d-%H%M%S-$$'`;
   chomp($tmpFile);
   return $tmpFile;
 }
-
-sub Verify
-{
-	my ($inFile) = @_;
-	
-	my $status = 1;
-	if(!-e $inFile)
-	{
-		$status = 0;
-	} 
-	else
-	{
-		my $numLines = `wc -l < $inFile`;
-		chomp($numLines);
-		if($numLines == 0)
-		{
-			print STDERR "! File $inFile has no content\n";
-			$status = 0;
-		}
-	}
-
-	return $status;
-}
-

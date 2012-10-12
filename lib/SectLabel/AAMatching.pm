@@ -23,8 +23,6 @@ use ParsCit::PostProcess;
 
 # Dictionary
 my %dict = ();
-# CRF++
-my $crft = $FindBin::Bin . "/../" . $SectLabel::Config::crf_test;
 
 # Matching features of each author, including
 # Signals
@@ -77,7 +75,7 @@ sub AAMatching
 	my $aff_lines	= Omni::Traversal::OmniCollector($doc, $aff_addrs, $need_object);
 	
 	# Dictionary
-	ReadDict($FindBin::Bin . "/../" . $SectLabel::Config::dictFile);
+	ReadDict($SectLabel::Config::dictFile);
 
 	# Authors
 	my ($aut_features, $aut_rc_features) = AuthorFeatureExtraction($aut_lines, $aut_addrs);
@@ -416,7 +414,7 @@ sub AAMatchingImp
 	my $match_model = $SectLabel::Config::matFile; 
 
 	# Matching
-  	system("$crft -m $match_model $infile > $outfile");
+  	system("crf_test -m $match_model $infile > $outfile");
 
 	# List of authors and their affiliation (if exists)
 	my %aa = ();
@@ -501,7 +499,7 @@ sub AffiliationExtraction
 	my $aff_model = $SectLabel::Config::affFile; 
 
 	# Split the authors
-  	system("$crft -m $aff_model $infile > $outfile");
+  	system("crf_test -m $aff_model $infile > $outfile");
 
 	# Each affiliation can have only one signal
 	my %asg = ();
@@ -731,7 +729,7 @@ sub AuthorExtraction
 	my $author_model = $SectLabel::Config::autFile; 
 
 	# Split the authors
-  	system("$crft -m $author_model $infile > $outfile");
+  	system("crf_test -m $author_model $infile > $outfile");
 
 	# Each author can have one or more signals
 	my %asg = ();
@@ -1090,7 +1088,7 @@ sub AffiliationFeatureExtraction
 	# Sort all the font descend with the number of their appearance
 	my @sorted = sort { $fonts{ $b } <=> $fonts{ $a } } keys %fonts;
 	# Select the dominated font
-	$dominate_font = $sorted[ 0 ];
+	$dominate_font = @sorted[ 0 ];
 
 	my $size_mismatch = undef;
 	# TODO: serious error if the size of aff_lines and the size of aff_addrs mismatch
@@ -1292,7 +1290,7 @@ sub AffiliationFeatureExtraction
 			
 					my $content_n	= $content;
 					# Remove punctuation
-					$content_n		=~ s/[^\w]//g;
+					my $content_n	=~ s/[^\w]//g;
 					# Lower case
 					my $content_l	= lc($content);
 					# Lower case, no punctuation
@@ -1458,7 +1456,7 @@ sub AuthorFeatureExtraction
 	# Sort all the font descend with the number of their appearance
 	my @sorted = sort { $fonts{ $b } <=> $fonts{ $a } } keys %fonts;
 	# Select the dominated font
-	$dominate_font = $sorted[ 0 ];
+	$dominate_font = @sorted[ 0 ];
 
 	my $size_mismatch = undef;
 	# TODO: serious error if the size of aut_lines and the size of aut_addrs mismatch
@@ -1707,7 +1705,6 @@ sub AuthorFeatureExtraction
 
 					# Split into character
 		      		my @chars = split(//, $content);
-					my $clen  = scalar @chars;
 					# Content length
 					my $length =	(scalar(@chars) == 1)	? "1-char"	:
 									(scalar(@chars) == 2)	? "2-char"	:
@@ -1715,50 +1712,14 @@ sub AuthorFeatureExtraction
 					$features .= $length . "\t";
 					# First n-gram
 					$features .= $chars[ 0 ] . "\t";
-					if ($clen >= 2) {
-						$features .= join("", @chars[ 0..1 ]) . "\t";
-					} else {
-						$features .= $length . "\t";
-					}
-					if ($clen >= 3) {
-						$features .= join("", @chars[ 0..2 ]) . "\t";
-					} elsif ($clen >= 2) {
-						$features .= join("", @chars[ 0..1 ]) . "\t";
-					} else {
-						$features .= $length . "\t";
-					}
-					if ($clen >= 4) {
-						$features .= join("", @chars[ 0..3 ]) . "\t";
-					} elsif ($clen >= 3) {
-						$features .= join("", @chars[ 0..2 ]) . "\t";
-					} elsif ($clen >= 2) {
-						$features .= join("", @chars[ 0..1 ]) . "\t";
-					} else {
-						$features .= $length . "\t";
-					}
+					$features .= join("", @chars[ 0..1 ]) . "\t";
+					$features .= join("", @chars[ 0..2 ]) . "\t";
+					$features .= join("", @chars[ 0..3 ]) . "\t";
 	      			# Last n-gram
 					$features .= $chars[ -1 ] . "\t";
-					if ($clen >= 2) {
-						$features .= join("", @chars[ -2..-1 ]) . "\t";
-					} else {
-						$features .= $chars[ -1 ] . "\t";
-					}
-					if ($clen >= 3) {
-						$features .= join("", @chars[ -3..-1 ]) . "\t";
-					} elsif ($clen >= 2) {
-						$features .= join("", @chars[ -2..-1 ]) . "\t";
-					} else {
-						$features .= $chars[ -1 ] . "\t";
-					}
-					if ($clen >= 4) {
-						$features .= join("", @chars[ -4..-1 ]) . "\t";
-					} elsif ($clen >= 3) {
-						$features .= join("", @chars[ -3..-1 ]) . "\t";
-					} elsif ($clen >= 2) {
-						$features .= join("", @chars[ -2..-1 ]) . "\t";
-					} else {
-						$features .= $chars[ -1 ] . "\t";
-					}
+					$features .= join("", @chars[ -2..-1 ]) . "\t";
+					$features .= join("", @chars[ -3..-1 ]) . "\t";
+					$features .= join("", @chars[ -4..-1 ]) . "\t";
 			
 					# Dictionary
 					my $dict_status = (defined $dict{ $content_nl }) ? $dict{ $content_nl } : 0;

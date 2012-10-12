@@ -190,77 +190,37 @@ sub generateKeywordFeature {
 }
 
 sub generateTokenFeature {
-	my ($token, $feats) = @_;
-	
-	# prep
-	my $word	= $token;
-	my $wordNP	= $token;			# No punctuation
+  my ($token, $feats) = @_;
 
-	$wordNP		=~ s/[^\w]//g;
-	if ($wordNP =~ /^\s*$/) { $wordNP = "EMPTY"; }
-
-	my $wordLCNP  = lc($wordNP);	# Lowercased word, no punctuation
-	if ($wordLCNP =~ /^\s*$/) { $wordLCNP = "EMPTY"; }
+  # prep
+  my $word = $token;
+  my $wordNP = $token;			      # no punctuation
+  $wordNP =~ s/[^\w]//g;
+  if ($wordNP =~ /^\s*$/) { $wordNP = "EMPTY"; }
+  my $wordLCNP = lc($wordNP);    # lowercased word, no punctuation
+  if ($wordLCNP =~ /^\s*$/) { $wordLCNP = "EMPTY"; }
   
-	## Feature generation
-  	push(@{$feats}, "TOKEN-$word");			    # 0 = lexical word
+  ## feature generation
+  push(@{$feats}, "TOKEN-$word");			    # 0 = lexical word
 
-	my @chars = split(//,$word);
-	my $lastChar = $chars[-1];
-	if ($lastChar =~ /[a-z]/) { $lastChar = 'a'; }
-	elsif ($lastChar =~ /[A-Z]/) { $lastChar = 'A'; }
-	elsif ($lastChar =~ /[0-9]/) { $lastChar = '0'; }
-	push(@{$feats}, $lastChar);		       # 1 = last char
- 
-	my $chars_len = scalar @chars;
-
-	push(@{$feats}, $chars[0]);		      		# 2 = first char
-	if ($chars_len >= 2) {	
-	  	push(@{$feats}, join("",@chars[0..1]));	# 3 = first 2 chars
-	} else {
-		push(@{$feats}, $chars[0]);		      	# 3 = first 2 chars
-	}
-	if ($chars_len >= 3) {
-		push(@{$feats}, join("",@chars[0..2]));	# 4 = first 3 chars
-	} elsif ($chars_len >= 2) {
-	  	push(@{$feats}, join("",@chars[0..1]));	# 4 = first 3 chars
-	} else {
-		push(@{$feats}, $chars[0]);		      	# 4 = first 3 chars
-	}
-	if ($chars_len >= 4) {
-		push(@{$feats}, join("",@chars[0..3]));	# 5 = first 4 chars
-	} elsif ($chars_len >= 3) {
-		push(@{$feats}, join("",@chars[0..2]));	# 5 = first 4 chars
-	} elsif ($chars_len >= 2) {
-	  	push(@{$feats}, join("",@chars[0..1]));	# 5 = first 4 chars
-	} else {
-		push(@{$feats}, $chars[0]);		      	# 5 = first 4 chars
-	}
+  my @chars = split(//,$word);
+  my $lastChar = $chars[-1];
+  if ($lastChar =~ /[a-z]/) { $lastChar = 'a'; }
+  elsif ($lastChar =~ /[A-Z]/) { $lastChar = 'A'; }
+  elsif ($lastChar =~ /[0-9]/) { $lastChar = '0'; }
+  push(@{$feats}, $lastChar);		       # 1 = last char
   
-	push(@{$feats}, $chars[-1]);					# 6 = last char
-	if ($chars_len >= 2) {
-		push(@{$feats}, join("",@chars[-2..-1]));	# 7 = last 2 chars
-	} else {
-		push(@{$feats}, $chars[-1]);				# 7 = last 2 chars
-	}
-	if ($chars_len >= 3) {
-		push(@{$feats}, join("",@chars[-3..-1]));	# 8 = last 3 chars
-	} elsif ($chars_len >= 2) {
-		push(@{$feats}, join("",@chars[-2..-1]));	# 8 = last 3 chars
-	} else {
-		push(@{$feats}, $chars[-1]);				# 8 = last 3 chars
-	}
-	if ($chars_len >= 4) {
-		push(@{$feats}, join("",@chars[-4..-1]));	# 9 = last 4 chars
-	} elsif ($chars_len >= 3) {
-		push(@{$feats}, join("",@chars[-3..-1]));	# 9 = last 4 chars
-	} elsif ($chars_len >= 2) {
-		push(@{$feats}, join("",@chars[-2..-1]));	# 9 = last 4 chars
-	} else {
-		push(@{$feats}, $chars[-1]);				# 9 = last 4 chars
-	}
+  push(@{$feats}, $chars[0]);		      # 2 = first char
+  push(@{$feats}, join("",@chars[0..1]));  # 3 = first 2 chars
+  push(@{$feats}, join("",@chars[0..2]));  # 4 = first 3 chars
+  push(@{$feats}, join("",@chars[0..3]));  # 5 = first 4 chars
   
-	push(@{$feats}, $wordLCNP);  # 10 = lowercased word, no punct
+  push(@{$feats}, $chars[-1]);		       # 6 = last char
+  push(@{$feats}, join("",@chars[-2..-1])); # 7 = last 2 chars
+  push(@{$feats}, join("",@chars[-3..-1])); # 8 = last 3 chars
+  push(@{$feats}, join("",@chars[-4..-1])); # 9 = last 4 chars
+  
+  push(@{$feats}, $wordLCNP);  # 10 = lowercased word, no punct
   
   # 11 - capitalization
   my $ortho = ($wordNP =~ /^[A-Z]$/) ? "singleCap" :
@@ -318,10 +278,12 @@ sub generateTokenFeature {
   push(@{$feats}, $punct);		    # 22 = punctuation
 }
 
+# 2012/10/05 Yumichika modified! For Windows!
 sub buildTmpFile {
     my ($filename) = @_;
     my $tmpfile = $filename;
     $tmpfile =~ s/[\.\/]//g;
+	$tmpfile 	=~ s/d://g;
     $tmpfile .= $$ . time;
     # untaint tmpfile variable
     if ($tmpfile =~ /^([-\@\w.]+)$/) {
@@ -329,9 +291,24 @@ sub buildTmpFile {
     }
     
     # return $tmpfile;
-    return "/tmp/$tmpfile"; # Altered by Min (Thu Feb 28 13:08:59 SGT 2008)
+    return "d:/$tmpfile"; # Altered by Min (Thu Feb 28 13:08:59 SGT 2008)
 
 }  # buildTmpFile
+
+#sub buildTmpFile {
+#    my ($filename) = @_;
+#    my $tmpfile = $filename;
+#    $tmpfile =~ s/[\.\/]//g;
+#    $tmpfile .= $$ . time;
+#    # untaint tmpfile variable
+#    if ($tmpfile =~ /^([-\@\w.]+)$/) {
+#	$tmpfile = $1;
+#    }
+#    
+#    # return $tmpfile;
+#    return "/tmp/$tmpfile"; # Altered by Min (Thu Feb 28 13:08:59 SGT 2008)
+#
+#}  # buildTmpFile
 
 
 sub fatal {
@@ -394,50 +371,33 @@ sub readKeywordDict {
 }
 
 sub readDict {
-	my $dictFileLoc = shift @_;
-	
-	my $mode = 0;
-	open (DATA, "<:utf8", $dictFileLoc) || die "Could not open dict file $dictFileLoc: $!";
-	
-	while (<DATA>) {
-		if (/^\#\# Male/) { 
-			$mode = 1; 
-		} elsif (/^\#\# Female/) { 
-			$mode = 2; 
-		} elsif (/^\#\# Last/) { 
-			$mode = 4; 
-		} elsif (/^\#\# Chinese/) { 
-			$mode = 4; 
-		} elsif (/^\#\# Months/) { 
-			$mode = 8; 
-		} elsif (/^\#\# Place/) { 
-			$mode = 16; 
-		} elsif (/^\#\# Publisher/) { 
-			$mode = 32; 
-		} elsif (/^\#/) { 
-			next; 
-		} else {
-			chop;
-			
-			my $key = $_;
-			my $val = 0;
+  my $dictFileLoc = shift @_;
+  my $mode = 0;
+  open (DATA, "<:utf8", $dictFileLoc) || die "Could not open dict file $dictFileLoc: $!";
+  while (<DATA>) {
+    if (/^\#\# Male/) { $mode = 1; }			  # male names
+    elsif (/^\#\# Female/) { $mode = 2; }		# female names
+    elsif (/^\#\# Last/) { $mode = 4; }			  # last names
+    elsif (/^\#\# Chinese/) { $mode = 4; }		  # last names
+    elsif (/^\#\# Months/) { $mode = 8; }		 # month names
+    elsif (/^\#\# Place/) { $mode = 16; }		 # place names
+    elsif (/^\#\# Publisher/) { $mode = 32; }	     # publisher names
+    elsif (/^\#/) { next; }
+    else {
+      chop;
+      my $key = $_;
+      my $val = 0;
+      if (/\t/) {				     # has probability
+	($key,$val) = split (/\t/,$_);
+      }
 
-			# Has probability
-			if (/\t/) {
-				($key,$val) = split (/\t/,$_);
-			}
+      # already tagged (some entries may appear in same part of lexicon more than once
+      if ($dict{$key} >= $mode) { next; }
+      else { $dict{$key} += $mode; }		      # not yet tagged
+    }
+  }
+  close (DATA);
 
-			# Already tagged (some entries may appear in same part of lexicon more than once
-			if ((defined $dict{ $key }) && ($dict{ $key } >= $mode)) { 
-				next; 
-			} else { 
-				# Not yet tagged
-				$dict{ $key } += $mode; 
-			}
-		}
-	}
-	
-	close (DATA);
 }  # readDict
 
 sub execute {

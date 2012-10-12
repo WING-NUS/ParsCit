@@ -49,7 +49,6 @@ H2, H3 {
   font-family: arial, lucinda, helvetica;
   font-weight: normal; 
   background: #00BA4A;
-  padding: 5px;
 }
  
 H4 {
@@ -104,8 +103,3 @@ SPAN.subsubsectionHeader {background: #ccff66;}
 SPAN.table {background: #FFCC99;}
 SPAN.tableCaption {background: #FF00CC;}
 DIV.contexts { font-size: .8em; background: #FFFFFF; border: 1px solid #000000; }
-#leftcontent { position: absolute; background: none repeat scroll 0% 0% lightblue; left: 8px; width: auto; border: 1px solid rgb(0, 0, 0); }
-#centercontent { margin-left: 20%; padding-left: 15px; width: 85%; solid rgb(0, 0, 0);  }
-html > body #centercontent { margin-left: auto; padding: 10px; }
-p.small, span.small { color: black; font-size: 80%; } 
-

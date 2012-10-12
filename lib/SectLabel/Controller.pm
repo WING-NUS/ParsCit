@@ -210,7 +210,9 @@ sub GetGenericHeaders
 	my $num_headers = scalar(@{ $headers });
 
 	# Put the list of headers to file
-  	my $header_file = "/tmp/" . NewTmpFile();
+	# 2012/10/05 Yumichika modified! For Windows!
+  	# my $header_file = "/tmp/" . NewTmpFile();
+  	my $header_file = "d:/" . NewTmpFile();
 
   	$generic_sect_path = UntaintPath($generic_sect_path);
 	
@@ -219,7 +221,7 @@ sub GetGenericHeaders
 	close OF;
   
 	# Get a list of generic headers
-  	my $cmd = $generic_sect_path . " " . $header_file . " " . $header_file . ".out";
+  	my $cmd = "ruby " . $generic_sect_path . " " . $header_file . " " . $header_file . ".out";
   	system($cmd);
 
 	open(IF, "<:utf8", $header_file . ".out");
@@ -317,16 +319,25 @@ sub UntaintPath
 	return $path;
 }
 
-###
-# Thang v100401 method to generate tmp file name
-###
+# 2012/10/06 Yumichika Modified! For Windows!
 sub NewTmpFile 
 {
-	my $tmpfile = `date '+%Y%m%d-%H%M%S-$$'`;
-
+	my $tmpfile = $$ . time;
 	chomp($tmpfile);
 	$tmpfile = UntaintPath($tmpfile);
 	return $tmpfile;
 }
+
+###
+# Thang v100401 method to generate tmp file name
+###
+#sub NewTmpFile 
+#{
+#	my $tmpfile = $$ . time`date '+%Y%m%d-%H%M%S-$$'`;
+#
+#	chomp($tmpfile);
+#	$tmpfile = UntaintPath($tmpfile);
+#	return $tmpfile;
+#}
 
 1;

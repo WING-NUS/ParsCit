@@ -1065,12 +1065,14 @@ sub GenerateFuncFeature
   	push(@{$templates}, "\n");
 }
 
+# 2012/10/05 Yumichika modified! For Windows!
 sub BuildTmpFile 
 {
     my ($filename) = @_;
 	
 	my $tmpfile = $filename;
     $tmpfile 	=~ s/[\.\/]//g;
+	$tmpfile 	=~ s/d://g;
     $tmpfile 	.= $$ . time;
     
 	# Untaint tmpfile variable
@@ -1078,9 +1080,26 @@ sub BuildTmpFile
 	{
 		$tmpfile = $1;
     }
-    
-    return "/tmp/$tmpfile"; # Altered by Min (Thu Feb 28 13:08:59 SGT 2008)
+ 
+    return "d:/$tmpfile";
 }
+
+#sub BuildTmpFile 
+#{
+#    my ($filename) = @_;
+#
+#	my $tmpfile = $filename;
+#    $tmpfile 	=~ s/[\.\/]//g;
+#    $tmpfile 	.= $$ . time;
+#    
+#	# Untaint tmpfile variable
+#    if ($tmpfile =~ /^([-\@\w.]+)$/) 
+#	{
+#		$tmpfile = $1;
+#    }
+#	
+#	return "/tmp/$tmpfile"; # Altered by Min (Thu Feb 28 13:08:59 SGT 2008)
+#}
 
 
 sub Fatal 
@@ -1095,8 +1114,11 @@ sub Decode
 	my ($infile, $model_file, $outfile) = @_;
   
   	my $labeled_file = BuildTmpFile($infile);
-  	Execute("$crf_test -v1 -m $model_file $infile > $labeled_file"); #  -v1: output confidence information
-
+	
+	# 2012/10/05 Yumichika Modified! For Windows!
+  	# Execute("$crf_test -v1 -m $model_file $infile > $labeled_file"); #  -v1: output confidence information
+  	Execute("$crf_test.exe -v1 -m $model_file $infile > $labeled_file"); #  -v1: output confidence information
+	
   	open (PIPE, "<:utf8", $labeled_file) || die "# crash\t\tCan't open \"$labeled_file\"";
   	open (OUT, ">:utf8", $outfile) || die "# crash\t\tCan't open \"$outfile\"";
 
@@ -1225,6 +1247,7 @@ sub LoadListHash
 sub Untaint 
 {
 	my ($s) = @_;
+	
   	if ($s =~ /^([\w \-\@\(\),\.\/<>]+)$/) 
 	{
     	$s = $1;               # $data now untainted
@@ -1240,7 +1263,7 @@ sub Untaint
 sub Execute 
 {
 	my ($cmd) = @_;
-  	$cmd = Untaint($cmd);
+  	#$cmd = Untaint($cmd);
   	system($cmd);
 }
 
